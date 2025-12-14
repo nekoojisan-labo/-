@@ -9,40 +9,70 @@
 <body>
   <div class="container">
     <header class="header">
-      <h1>Claude Assistant</h1>
-      <button id="settingsBtn" class="icon-btn" title="設定">⚙️</button>
+      <h1>🤖 Claude Assistant</h1>
     </header>
 
-    <div id="apiKeyWarning" class="warning hidden">
-      <p>APIキーが設定されていません。<a href="#" id="openSettings">設定</a>からAPIキーを入力してください。</p>
+    <div class="page-info" id="pageInfo">
+      <div class="page-title" id="pageTitle">読み込み中...</div>
+      <div class="page-url" id="pageUrl"></div>
     </div>
 
-    <div class="chat-container" id="chatContainer">
-      <div class="messages" id="messages">
-        <div class="message assistant">
-          <p>こんにちは！私はClaudeアシスタントです。以下のことができます：</p>
-          <ul>
-            <li>📄 現在のページの内容を分析</li>
-            <li>🗂️ タブの管理（一覧表示、切り替え、閉じる）</li>
-            <li>⭐ ブックマークの検索・管理</li>
-            <li>📜 閲覧履歴の検索</li>
-            <li>❓ 一般的な質問への回答</li>
-          </ul>
-          <p>何かお手伝いできることはありますか？</p>
-        </div>
+    <div class="section">
+      <h2>📄 ページ分析</h2>
+      <div class="actions">
+        <button class="action-btn" data-action="summarize">
+          <span class="icon">📝</span>
+          <span class="label">要約する</span>
+        </button>
+        <button class="action-btn" data-action="explain">
+          <span class="icon">💡</span>
+          <span class="label">解説する</span>
+        </button>
+        <button class="action-btn" data-action="translate">
+          <span class="icon">🌐</span>
+          <span class="label">翻訳する</span>
+        </button>
+        <button class="action-btn" data-action="questions">
+          <span class="icon">❓</span>
+          <span class="label">質問を作成</span>
+        </button>
       </div>
     </div>
 
-    <div class="quick-actions">
-      <button class="action-btn" data-action="analyzePage">📄 ページ分析</button>
-      <button class="action-btn" data-action="listTabs">🗂️ タブ一覧</button>
-      <button class="action-btn" data-action="searchBookmarks">⭐ ブックマーク</button>
-      <button class="action-btn" data-action="showHistory">📜 履歴</button>
+    <div class="section">
+      <h2>🗂️ ブラウザ情報</h2>
+      <div class="actions">
+        <button class="action-btn" data-action="tabs">
+          <span class="icon">📑</span>
+          <span class="label">タブ一覧</span>
+        </button>
+        <button class="action-btn" data-action="bookmarks">
+          <span class="icon">⭐</span>
+          <span class="label">ブックマーク</span>
+        </button>
+        <button class="action-btn" data-action="history">
+          <span class="icon">📜</span>
+          <span class="label">閲覧履歴</span>
+        </button>
+      </div>
     </div>
 
-    <div class="input-container">
-      <textarea id="userInput" placeholder="メッセージを入力..." rows="2"></textarea>
-      <button id="sendBtn" class="send-btn">送信</button>
+    <div class="section">
+      <h2>✏️ カスタム質問</h2>
+      <textarea id="customPrompt" placeholder="Claudeへの質問を入力..."></textarea>
+      <button class="action-btn primary" id="customBtn">
+        <span class="icon">🚀</span>
+        <span class="label">Claudeに送信</span>
+      </button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="footer">
+      <label class="checkbox-label">
+        <input type="checkbox" id="includeContent" checked>
+        ページ内容を含める
+      </label>
     </div>
   </div>
 

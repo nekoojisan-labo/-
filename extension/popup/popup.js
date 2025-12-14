@@ -1,262 +1,227 @@
-// Claude Assistant - Popup Script
+// Claude Assistant - Popup Script (No API Version)
 
-let conversationHistory = [];
+const CLAUDE_URL = 'https://claude.ai/new';
 
 // DOM要素
-const messagesContainer = document.getElementById('messages');
-const userInput = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
-const settingsBtn = document.getElementById('settingsBtn');
-const apiKeyWarning = document.getElementById('apiKeyWarning');
-const openSettingsLink = document.getElementById('openSettings');
+const pageTitleEl = document.getElementById('pageTitle');
+const pageUrlEl = document.getElementById('pageUrl');
+const customPromptEl = document.getElementById('customPrompt');
+const customBtn = document.getElementById('customBtn');
+const includeContentEl = document.getElementById('includeContent');
+const statusEl = document.getElementById('status');
+
+// 現在のページ情報
+let currentPageInfo = null;
 
 // 初期化
 document.addEventListener('DOMContentLoaded', async () => {
-  await checkApiKey();
+  await loadCurrentPage();
   setupEventListeners();
 });
 
-// APIキー確認
-async function checkApiKey() {
-  const response = await chrome.runtime.sendMessage({ action: 'checkApiKey' });
-  if (!response.hasApiKey) {
-    apiKeyWarning.classList.remove('hidden');
+// 現在のページ情報を取得
+async function loadCurrentPage() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (tab) {
+      pageTitleEl.textContent = tab.title || 'タイトルなし';
+      pageUrlEl.textContent = tab.url || '';
+
+      // ページコンテンツを取得
+      if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+        const response = await chrome.runtime.sendMessage({
+          action: 'getPageContent',
+          tabId: tab.id
+        });
+
+        if (response.success) {
+          currentPageInfo = response.data;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('ページ情報取得エラー:', error);
+    pageTitleEl.textContent = 'ページ情報を取得できません';
   }
 }
 
 // イベントリスナー設定
 function setupEventListeners() {
-  sendBtn.addEventListener('click', handleSend);
+  // アクションボタン
+  document.querySelectorAll('.action-btn[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleAction(btn.dataset.action));
+  });
 
-  userInput.addEventListener('keydown', (e) => {
+  // カスタム質問ボタン
+  customBtn.addEventListener('click', handleCustomPrompt);
+
+  // Enterキーで送信
+  customPromptEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      handleCustomPrompt();
     }
-  });
-
-  settingsBtn.addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
-  });
-
-  openSettingsLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    chrome.runtime.openOptionsPage();
-  });
-
-  // クイックアクションボタン
-  document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleQuickAction(btn.dataset.action));
   });
 }
 
-// メッセージ送信処理
-async function handleSend() {
-  const text = userInput.value.trim();
-  if (!text) return;
-
-  addMessage(text, 'user');
-  userInput.value = '';
-  sendBtn.disabled = true;
-
-  // ローディング表示
-  const loadingId = showLoading();
-
-  try {
-    // コンテキスト情報を収集
-    const context = await gatherContext(text);
-
-    // システムプロンプトを構築
-    const systemPrompt = buildSystemPrompt(context);
-
-    // 会話履歴に追加
-    conversationHistory.push({
-      role: 'user',
-      content: text
-    });
-
-    // Claudeに送信
-    const response = await chrome.runtime.sendMessage({
-      action: 'chat',
-      messages: conversationHistory,
-      systemPrompt: systemPrompt
-    });
-
-    hideLoading(loadingId);
-
-    if (response.success) {
-      conversationHistory.push({
-        role: 'assistant',
-        content: response.response
-      });
-      addMessage(response.response, 'assistant');
-    } else {
-      addMessage('エラー: ' + response.error, 'assistant');
-    }
-  } catch (error) {
-    hideLoading(loadingId);
-    addMessage('エラーが発生しました: ' + error.message, 'assistant');
-  }
-
-  sendBtn.disabled = false;
-  userInput.focus();
-}
-
-// クイックアクション処理
-async function handleQuickAction(action) {
-  let message = '';
+// アクション処理
+async function handleAction(action) {
+  let prompt = '';
+  let context = '';
 
   switch (action) {
-    case 'analyzePage':
-      message = '現在開いているページの内容を分析して、要約と主要なポイントを教えてください。';
+    case 'summarize':
+      prompt = '以下のWebページの内容を簡潔に要約してください。重要なポイントを箇条書きでまとめてください。';
+      context = await getPageContext();
       break;
-    case 'listTabs':
-      message = '現在開いているタブの一覧を表示してください。';
+
+    case 'explain':
+      prompt = '以下のWebページの内容を分かりやすく解説してください。専門用語があれば説明を加えてください。';
+      context = await getPageContext();
       break;
-    case 'searchBookmarks':
-      message = 'ブックマークの一覧を表示してください。';
+
+    case 'translate':
+      prompt = '以下のWebページの内容を日本語に翻訳してください（すでに日本語の場合は英語に翻訳してください）。';
+      context = await getPageContext();
       break;
-    case 'showHistory':
-      message = '最近の閲覧履歴を表示してください。';
+
+    case 'questions':
+      prompt = '以下のWebページの内容について、理解を深めるための質問を5つ作成してください。';
+      context = await getPageContext();
+      break;
+
+    case 'tabs':
+      prompt = '以下は現在開いているブラウザのタブ一覧です。整理のアドバイスをください。関連するタブをグループ化したり、不要そうなタブを提案してください。';
+      context = await getTabsContext();
+      break;
+
+    case 'bookmarks':
+      prompt = '以下は私のブックマーク一覧です。カテゴリ分けや整理のアドバイスをください。';
+      context = await getBookmarksContext();
+      break;
+
+    case 'history':
+      prompt = '以下は最近の閲覧履歴です。私の興味関心を分析して、おすすめのトピックや関連情報を提案してください。';
+      context = await getHistoryContext();
       break;
   }
 
-  userInput.value = message;
-  await handleSend();
+  await sendToClaude(prompt, context);
 }
 
-// コンテキスト情報を収集
-async function gatherContext(userMessage) {
-  const context = {
-    currentPage: null,
-    tabs: null,
-    bookmarks: null,
-    history: null
-  };
+// カスタムプロンプト処理
+async function handleCustomPrompt() {
+  const prompt = customPromptEl.value.trim();
+  if (!prompt) {
+    showStatus('質問を入力してください', 'error');
+    return;
+  }
 
-  const lowerMessage = userMessage.toLowerCase();
+  let context = '';
+  if (includeContentEl.checked) {
+    context = await getPageContext();
+  }
 
-  // ページ分析が必要な場合
-  if (lowerMessage.includes('ページ') || lowerMessage.includes('page') ||
-      lowerMessage.includes('分析') || lowerMessage.includes('要約') ||
-      lowerMessage.includes('内容') || lowerMessage.includes('このサイト')) {
+  await sendToClaude(prompt, context);
+}
+
+// ページコンテキスト取得
+async function getPageContext() {
+  if (!currentPageInfo) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) {
-      const response = await chrome.runtime.sendMessage({
-        action: 'getPageContent',
-        tabId: tab.id
-      });
-      if (response.success) {
-        context.currentPage = response.data;
-      }
-    }
+    return `## ページ情報\n- タイトル: ${tab?.title || '不明'}\n- URL: ${tab?.url || '不明'}`;
   }
 
-  // タブ情報が必要な場合
-  if (lowerMessage.includes('タブ') || lowerMessage.includes('tab')) {
-    const response = await chrome.runtime.sendMessage({ action: 'getTabs' });
-    if (response.success) {
-      context.tabs = response.data;
-    }
+  let context = `## ページ情報\n`;
+  context += `- タイトル: ${currentPageInfo.title}\n`;
+  context += `- URL: ${currentPageInfo.url}\n`;
+
+  if (currentPageInfo.metaDescription) {
+    context += `- 説明: ${currentPageInfo.metaDescription}\n`;
   }
 
-  // ブックマーク情報が必要な場合
-  if (lowerMessage.includes('ブックマーク') || lowerMessage.includes('bookmark') ||
-      lowerMessage.includes('お気に入り')) {
-    const response = await chrome.runtime.sendMessage({ action: 'getBookmarks' });
-    if (response.success) {
-      context.bookmarks = response.data.slice(0, 50); // 最大50件
-    }
-  }
-
-  // 履歴情報が必要な場合
-  if (lowerMessage.includes('履歴') || lowerMessage.includes('history') ||
-      lowerMessage.includes('最近')) {
-    const response = await chrome.runtime.sendMessage({ action: 'getHistory', maxResults: 30 });
-    if (response.success) {
-      context.history = response.data;
-    }
+  if (includeContentEl.checked && currentPageInfo.content) {
+    context += `\n## ページ内容\n${currentPageInfo.content}`;
   }
 
   return context;
 }
 
-// システムプロンプトを構築
-function buildSystemPrompt(context) {
-  let prompt = `あなたはChromeブラウザのアシスタント「Claude Assistant」です。
-ユーザーのブラウジングを支援し、ページの分析、タブ管理、ブックマーク検索、履歴検索などを行います。
-回答は日本語で、簡潔かつ親切に行ってください。
+// タブコンテキスト取得
+async function getTabsContext() {
+  const response = await chrome.runtime.sendMessage({ action: 'getTabs' });
+  if (!response.success) return '';
 
-`;
+  let context = '## 開いているタブ一覧\n';
+  response.data.forEach((tab, i) => {
+    context += `${i + 1}. ${tab.title}\n   URL: ${tab.url}\n`;
+  });
 
-  if (context.currentPage) {
-    prompt += `## 現在のページ情報
-- タイトル: ${context.currentPage.title}
-- URL: ${context.currentPage.url}
-- 説明: ${context.currentPage.metaDescription}
-- ページ内容:
-${context.currentPage.content}
-
-`;
-  }
-
-  if (context.tabs) {
-    prompt += `## 開いているタブ (${context.tabs.length}個)
-${context.tabs.map((t, i) => `${i + 1}. [ID:${t.id}] ${t.title} - ${t.url}`).join('\n')}
-
-`;
-  }
-
-  if (context.bookmarks) {
-    prompt += `## ブックマーク (${context.bookmarks.length}件)
-${context.bookmarks.map((b, i) => `${i + 1}. ${b.title} - ${b.url}`).join('\n')}
-
-`;
-  }
-
-  if (context.history) {
-    prompt += `## 閲覧履歴 (最近${context.history.length}件)
-${context.history.map((h, i) => `${i + 1}. ${h.title} - ${h.url} (訪問回数: ${h.visitCount})`).join('\n')}
-
-`;
-  }
-
-  return prompt;
+  return context;
 }
 
-// メッセージを追加
-function addMessage(text, role) {
-  const messageDiv = document.createElement('div');
-  messageDiv.className = `message ${role}`;
+// ブックマークコンテキスト取得
+async function getBookmarksContext() {
+  const response = await chrome.runtime.sendMessage({ action: 'getBookmarks' });
+  if (!response.success) return '';
 
-  // マークダウン風の簡易変換
-  let html = text
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
+  let context = '## ブックマーク一覧\n';
+  response.data.slice(0, 50).forEach((bookmark, i) => {
+    context += `${i + 1}. ${bookmark.title}\n   URL: ${bookmark.url}\n`;
+  });
 
-  messageDiv.innerHTML = `<p>${html}</p>`;
-  messagesContainer.appendChild(messageDiv);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  return context;
 }
 
-// ローディング表示
-function showLoading() {
-  const id = 'loading-' + Date.now();
-  const loadingDiv = document.createElement('div');
-  loadingDiv.id = id;
-  loadingDiv.className = 'loading';
-  loadingDiv.innerHTML = '<span></span><span></span><span></span>';
-  messagesContainer.appendChild(loadingDiv);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  return id;
+// 履歴コンテキスト取得
+async function getHistoryContext() {
+  const response = await chrome.runtime.sendMessage({ action: 'getHistory', maxResults: 30 });
+  if (!response.success) return '';
+
+  let context = '## 最近の閲覧履歴\n';
+  response.data.forEach((item, i) => {
+    const date = new Date(item.lastVisitTime).toLocaleString('ja-JP');
+    context += `${i + 1}. ${item.title}\n   URL: ${item.url}\n   最終訪問: ${date}\n`;
+  });
+
+  return context;
 }
 
-// ローディング非表示
-function hideLoading(id) {
-  const loadingDiv = document.getElementById(id);
-  if (loadingDiv) {
-    loadingDiv.remove();
+// Claudeに送信
+async function sendToClaude(prompt, context) {
+  try {
+    // プロンプトを構築
+    let fullPrompt = prompt;
+    if (context) {
+      fullPrompt += '\n\n---\n\n' + context;
+    }
+
+    // クリップボードにコピー
+    await navigator.clipboard.writeText(fullPrompt);
+
+    showStatus('コピーしました！Claude.aiを開きます...', 'success');
+
+    // 少し待ってからClaude.aiを開く
+    setTimeout(() => {
+      chrome.tabs.create({ url: CLAUDE_URL });
+      window.close();
+    }, 800);
+
+  } catch (error) {
+    console.error('エラー:', error);
+    showStatus('エラーが発生しました: ' + error.message, 'error');
+  }
+}
+
+// ステータス表示
+function showStatus(message, type) {
+  statusEl.textContent = message;
+  statusEl.className = 'status ' + type;
+
+  if (type !== 'success') {
+    setTimeout(() => {
+      statusEl.className = 'status';
+    }, 3000);
   }
 }
