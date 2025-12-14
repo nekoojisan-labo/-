@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Claude Assistant</h1>
+      <button id="settingsBtn" class="icon-btn" title="設定">⚙️</button>
+    </header>
+
+    <div id="apiKeyWarning" class="warning hidden">
+      <p>APIキーが設定されていません。<a href="#" id="openSettings">設定</a>からAPIキーを入力してください。</p>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+      <div class="messages" id="messages">
+        <div class="message assistant">
+          <p>こんにちは！私はClaudeアシスタントです。以下のことができます：</p>
+          <ul>
+            <li>📄 現在のページの内容を分析</li>
+            <li>🗂️ タブの管理（一覧表示、切り替え、閉じる）</li>
+            <li>⭐ ブックマークの検索・管理</li>
+            <li>📜 閲覧履歴の検索</li>
+            <li>❓ 一般的な質問への回答</li>
+          </ul>
+          <p>何かお手伝いできることはありますか？</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <button class="action-btn" data-action="analyzePage">📄 ページ分析</button>
+      <button class="action-btn" data-action="listTabs">🗂️ タブ一覧</button>
+      <button class="action-btn" data-action="searchBookmarks">⭐ ブックマーク</button>
+      <button class="action-btn" data-action="showHistory">📜 履歴</button>
+    </div>
+
+    <div class="input-container">
+      <textarea id="userInput" placeholder="メッセージを入力..." rows="2"></textarea>
+      <button id="sendBtn" class="send-btn">送信</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
