@@ -1,20 +1,58 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# スライドビルダー v2.2
 
-# Run and deploy your AI Studio app
+AI画像生成用のスライドプロンプトを簡単に作成できるツールです。
 
-This contains everything you need to run your app locally.
+## 機能
 
-View your app in AI Studio: https://ai.studio/apps/drive/1TMpZj7SbzwhJ25wmZy3FD979W1NvEmw-
+- **スライド設定**: サイズ（16:9/4:3/1:1/9:16）、出力解像度、デザインテーマ選択
+- **カラーパレット**: メイン/サブ/アクセント/背景/テキストの5色をカスタマイズ
+- **参照画像設定**: キャラクター/背景/イラストの参照画像指定
+- **一括スタイル設定**: 全スライドに統一スタイルを適用
+- **資料入力→自動分割**: 長文資料を指定枚数のスライドに自動分割
+- **スライド個別編集**: タイプ、ビジュアル、キャラクター、背景など詳細設定
+- **プロンプト生成**: 各スライド用のプロンプトを自動生成
+- **MD一括出力**: 全スライドのプロンプトをMarkdownでダウンロード
 
-## Run Locally
+## ファイル構成
 
-**Prerequisites:**  Node.js
+```
+/
+├── slide-builder.html    # メインHTML
+├── js/
+│   ├── config.js        # 設定データ（テーマ、スタイル定義）
+│   ├── state.js         # 状態管理
+│   ├── utils.js         # ユーティリティ関数
+│   ├── render.js        # 描画関数
+│   ├── prompt.js        # プロンプト生成
+│   ├── events.js        # イベントハンドラ
+│   └── main.js          # 初期化
+└── README.md
+```
 
+## 使い方
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. `slide-builder.html` をブラウザで開く
+2. デザインテーマとカラーを設定
+3. 資料入力欄にテキストを貼り付け
+4. スライド枚数を指定して「分割する」をクリック
+5. 各スライドを個別に編集
+6. プロンプトをコピーしてAI画像生成に使用
+
+## スライドタイプ
+
+- 表紙
+- セクション区切り
+- 箇条書き
+- 2カラム
+- 4パネル
+- 画像＋テキスト
+- 図解中心
+- データ・統計
+- タイムライン
+- 比較・Before/After
+- 引用・強調
+- まとめ
+
+## ライセンス
+
+MIT License
