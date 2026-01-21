@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>スライドビルダー v2.2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.5;font-size:14px}
+.container{max-width:1400px;margin:0 auto;padding:12px}
+.header{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #334155;margin-bottom:16px}
+.header h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-btns{display:flex;gap:8px}
+.reset-btn{background:#dc2626;border:none;border-radius:8px;padding:8px 16px;color:#fff;font-weight:600;cursor:pointer}
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+.left-col{display:flex;flex-direction:column;gap:12px}
+.right-col{position:sticky;top:12px;height:fit-content}
+.card{background:#1e293b;border-radius:12px;overflow:hidden}
+.card-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#334155;cursor:pointer}
+.card-title{font-weight:600;font-size:13px}
+.card-toggle{color:#64748b;font-size:10px}
+.card-content{padding:16px;display:flex;flex-direction:column;gap:12px}
+.card.collapsed .card-content{display:none}
+.card.collapsed .card-toggle{transform:rotate(-90deg)}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:11px;color:#94a3b8;font-weight:500}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+select,input[type="text"],input[type="number"],textarea{width:100%;padding:10px 12px;border:1px solid #475569;border-radius:8px;background:#0f172a;color:#e2e8f0;font-size:13px}
+select:focus,input:focus,textarea:focus{outline:none;border-color:#60a5fa}
+textarea{min-height:200px;resize:vertical;font-family:inherit}
+.select-compact{padding:8px 10px;font-size:12px}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+.toggle-label{font-size:12px;color:#cbd5e1}
+.toggle-switch{width:44px;height:24px;background:#475569;border-radius:12px;position:relative;cursor:pointer;transition:background 0.2s}
+.toggle-switch::after{content:'';position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform 0.2s}
+.toggle-switch.active{background:#60a5fa}
+.toggle-switch.active::after{transform:translateX(20px)}
+.subsection{border-top:1px solid #334155;padding-top:12px;margin-top:4px}
+.subsection:first-child{border-top:none;padding-top:0;margin-top:0}
+.subsection-title{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600}
+.option-group{display:flex;flex-wrap:wrap;gap:6px}
+.option-btn{padding:6px 12px;border:1px solid #475569;border-radius:6px;background:transparent;color:#cbd5e1;font-size:11px;cursor:pointer;transition:all 0.2s}
+.option-btn:hover{border-color:#60a5fa}
+.option-btn.active{background:#60a5fa;border-color:#60a5fa;color:#fff}
+.color-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.color-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+.color-label{font-size:9px;color:#64748b}
+.color-item input[type="color"]{width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;background:transparent}
+.color-value{font-size:9px;color:#94a3b8;font-family:monospace}
+.slide-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.slide-tab{padding:8px 16px;border:2px solid #475569;border-radius:8px;background:transparent;color:#cbd5e1;font-size:12px;cursor:pointer;transition:all 0.2s}
+.slide-tab:hover{border-color:#60a5fa}
+.slide-tab.active{background:#60a5fa;border-color:#60a5fa;color:#fff}
+.slide-tab.has-content{border-color:#34d399}
+.slide-tab.has-content.active{background:#34d399;border-color:#34d399}
+.slide-editor{background:#0f172a;border:1px solid #475569;border-radius:8px;padding:16px}
+.slide-editor-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.slide-editor-title{font-size:14px;font-weight:600;color:#60a5fa}
+.slide-type-select{width:auto;padding:6px 12px;font-size:11px}
+.slide-content-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.slide-content-item{display:flex;flex-direction:column;gap:4px}
+.slide-content-item label{font-size:10px;color:#94a3b8}
+.slide-content-item input,.slide-content-item textarea{font-size:12px;padding:8px}
+.slide-content-item textarea{min-height:80px}
+.preview-container{background:#1e293b;border-radius:12px;aspect-ratio:16/9;position:relative;overflow:hidden;padding:12px;box-sizing:border-box}
+.preview-slide{width:100%;height:100%;border-radius:6px;overflow:hidden;box-sizing:border-box;position:relative}
+.preview-label{position:absolute;bottom:4px;right:4px;font-size:9px;background:#000000aa;padding:2px 6px;border-radius:4px;color:#fff;z-index:10}
+.prompt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.prompt-btns{display:flex;gap:8px}
+.prompt-output{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:16px;font-family:'Monaco','Menlo',monospace;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:400px;overflow-y:auto;color:#a5f3fc}
+.copy-btn{background:#10b981;border:none;border-radius:6px;padding:8px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.copy-btn:hover{background:#059669}
+.copy-btn.secondary{background:#3b82f6}
+.copy-btn.secondary:hover{background:#2563eb}
+.dl-btn{background:#8b5cf6;border:none;border-radius:6px;padding:8px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.dl-btn:hover{background:#7c3aed}
+.notice-box{background:#1e40af33;border:1px solid #3b82f6;border-radius:8px;padding:10px 12px;font-size:11px;color:#93c5fd}
+.notice-box.success{background:#05966933;border-color:#10b981;color:#6ee7b7}
+.notice-box.warning{background:#f59e0b33;border-color:#f59e0b;color:#fcd34d}
+.hidden{display:none!important}
+.reset-notice{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#10b981;color:#fff;padding:16px 32px;border-radius:12px;font-weight:600;z-index:999;display:none}
+.split-controls{display:flex;align-items:center;gap:12px;margin-top:12px}
+.split-controls input[type="number"]{width:80px}
+.split-btn{background:#60a5fa;border:none;border-radius:6px;padding:8px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.split-btn:hover{background:#3b82f6}
+.stats-box{display:flex;gap:16px;padding:12px;background:#0f172a;border-radius:8px;margin-top:12px}
+.stat-item{text-align:center}
+.stat-value{font-size:20px;font-weight:700;color:#60a5fa}
+.stat-label{font-size:10px;color:#94a3b8}
+.fab-container{position:fixed;bottom:20px;right:20px;display:flex;gap:8px;z-index:200}
+.fab{width:56px;height:56px;border-radius:50%;border:none;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.fab.primary{background:linear-gradient(135deg,#60a5fa,#34d399);color:#fff}
+@media(min-width:901px){.fab-container{display:none}}
+.subsection{border-top:1px solid #334155;padding-top:12px;margin-top:12px}
+.editor-section{background:#1e293b;border-radius:6px;padding:8px;margin-top:8px}
+.editor-section-title{font-size:10px;color:#94a3b8;margin-bottom:6px;font-weight:600}
+.subsection:first-child{border-top:none;padding-top:0;margin-top:0}
+.subsection-title{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600}
+details.char-details{background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;margin-top:8px}
+details.char-details summary{outline:none}
+details.char-details[open] summary{margin-bottom:4px}
+</style>
+</head>
+<body>
+<div class="container">
+<header class="header">
+<h1>📑 スライドビルダー v2.2</h1>
+<div class="header-btns">
+<button type="button" class="reset-btn" id="reset-btn">リセット</button>
+</div>
+</header>
+
+<div class="main-grid">
+<div class="left-col">
+
+<div class="card" id="card-settings">
+<div class="card-header">
+<span class="card-title">⚙️ スライド設定</span>
+<span class="card-toggle">▼</span>
+</div>
+<div class="card-content">
+<div class="form-row">
+<div class="form-group">
+<label class="form-label">サイズ</label>
+<select id="slide-size">
+<option value="16:9">16:9（標準ワイド）</option>
+<option value="4:3">4:3（従来型）</option>
+<option value="1:1">1:1（正方形）</option>
+<option value="9:16">9:16（縦型）</option>
+</select>
+</div>
+<div class="form-group">
+<label class="form-label">出力サイズ</label>
+<select id="output-size">
+<option value="1920">1920px幅（フルHD）</option>
+<option value="1280">1280px幅（HD）</option>
+<option value="2560">2560px幅（2K）</option>
+</select>
+</div>
+</div>
+<div class="form-group">
+<label class="form-label">デザインテーマ</label>
+<select id="design-theme"></select>
+</div>
+<div class="color-row">
+<div class="color-item">
+<label class="color-label">メイン</label>
+<input type="color" id="c-main" value="#3B82F6">
+<span class="color-value" id="c-main-v">#3B82F6</span>
+</div>
+<div class="color-item">
+<label class="color-label">サブ</label>
+<input type="color" id="c-sub" value="#10B981">
+<span class="color-value" id="c-sub-v">#10B981</span>
+</div>
+<div class="color-item">
+<label class="color-label">アクセント</label>
+<input type="color" id="c-accent" value="#F59E0B">
+<span class="color-value" id="c-accent-v">#F59E0B</span>
+</div>
+<div class="color-item">
+<label class="color-label">背景</label>
+<input type="color" id="c-bg" value="#FFFFFF">
+<span class="color-value" id="c-bg-v">#FFFFFF</span>
+</div>
+<div class="color-item">
+<label class="color-label">テキスト</label>
+<input type="color" id="c-text" value="#1F2937">
+<span class="color-value" id="c-text-v">#1F2937</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="card" id="card-ref">
+<div class="card-header">
+<span class="card-title">📷 参照画像</span>
+<span class="card-toggle">▼</span>
+</div>
+<div class="card-content">
+<div class="toggle-row">
+<span class="toggle-label">👤 キャラクター参照画像</span>
+<div class="toggle-switch" id="ref-char"></div>
+</div>
+<div class="toggle-row">
+<span class="toggle-label">🌄 背景参照画像</span>
+<div class="toggle-switch" id="ref-bg"></div>
+</div>
+<div class="toggle-row">
+<span class="toggle-label">🎨 イラスト参照画像</span>
+<div class="toggle-switch" id="ref-illust"></div>
+</div>
+</div>
+</div>
+
+<div class="card" id="card-batch">
+<div class="card-header">
+<span class="card-title">🎨 一括スタイル設定</span>
+<span class="card-toggle">▼</span>
+</div>
+<div class="card-content">
+<div class="notice-box" style="margin-bottom:12px;">全スライドに統一適用。個別調整は各スライド編集で。</div>
+
+<div class="subsection">
+<div class="subsection-title">📋 レイアウト基本</div>
+<div class="form-row" style="grid-template-columns:1fr 1fr;">
+<div class="form-group">
+<label class="form-label">コンテンツスライドのタイプ</label>
+<select id="batch-slide-type"></select>
+</div>
+<div class="form-group">
+<label class="form-label">フレーム</label>
+<select id="batch-frame-style"></select>
+</div>
+</div>
+</div>
+
+<div class="subsection">
+<div class="subsection-title">🎨 スタイル</div>
+<div class="form-row" style="grid-template-columns:1fr 1fr;">
+<div class="form-group">
+<label class="form-label">アートスタイル</label>
+<select id="batch-art-style"></select>
+</div>
+<div class="form-group">
+<label class="form-label">構造</label>
+<select id="batch-structure"></select>
+</div>
+</div>
+</div>
+
+<div class="subsection">
+<div class="subsection-title">🖼️ ビジュアル</div>
+<div class="form-row" style="grid-template-columns:1fr 1fr;">
+<div class="form-group">
+<label class="form-label">ビジュアルタイプ</label>
+<select id="batch-visual"></select>
+</div>
+<div class="form-group">
+<label class="form-label">ビジュアル配置</label>
+<select id="batch-visual-pos"></select>
+</div>
+</div>
+</div>
+
+<div class="subsection">
+<div class="subsection-title">👤 キャラクター（ビジュアル=キャラ時）</div>
+<div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr;">
+<div class="form-group">
+<label class="form-label">性別</label>
+<select id="batch-char-gender" class="select-compact"></select>
+</div>
+<div class="form-group">
+<label class="form-label">年齢</label>
+<select id="batch-char-age" class="select-compact"></select>
+</div>
+<div class="form-group">
+<label class="form-label">服装</label>
+<select id="batch-char-outfit" class="select-compact"></select>
+</div>
+<div class="form-group">
+<label class="form-label">表情</label>
+<select id="batch-char-expression" class="select-compact"></select>
+</div>
+<div class="form-group">
+<label class="form-label">ポーズ</label>
+<select id="batch-char-pose" class="select-compact"></select>
+</div>
+</div>
+</div>
+
+<div class="subsection">
+<div class="subsection-title">📝 本文</div>
+<div class="form-row" style="grid-template-columns:1fr 1fr;">
+<div class="form-group">
+<label class="form-label">本文配置</label>
+<select id="batch-text-position"></select>
+</div>
+<div class="form-group">
+<label class="form-label">本文スタイル</label>
+<select id="batch-text-style"></select>
+</div>
+</div>
+</div>
+
+<div class="subsection">
+<div class="subsection-title">🌄 背景・装飾</div>
+<div class="form-row" style="grid-template-columns:1fr 1fr 1fr;">
+<div class="form-group">
+<label class="form-label">背景タイプ</label>
+<select id="batch-bg-type" class="select-compact"></select>
+</div>
+<div class="form-group">
+<label class="form-label">背景ムード</label>
+<select id="batch-bg-mood" class="select-compact"></select>
+</div>
+<div class="form-group">
+<label class="form-label">装飾</label>
+<select id="batch-decoration" class="select-compact"></select>
+</div>
+</div>
+</div>
+
+<div style="display:flex;gap:8px;margin-top:12px;">
+<button type="button" class="split-btn" id="apply-batch-btn" style="flex:1;">✓ 全スライドに適用</button>
+<button type="button" class="split-btn" id="apply-batch-empty-btn" style="flex:1;background:#6b7280;">未設定のみ適用</button>
+</div>
+</div>
+</div>
+
+<div class="card" id="card-content">
+<div class="card-header">
+<span class="card-title">📝 資料入力</span>
+<span class="card-toggle">▼</span>
+</div>
+<div class="card-content">
+<div class="form-group">
+<label class="form-label">スライド化したい資料・原稿を入力</label>
+<textarea id="source-content" placeholder="ここに長文の資料を貼り付けてください...
+
+例：
+# プレゼンテーションのタイトル
+
+## セクション1
+内容の説明...
+
+## セクション2
+詳細な説明..."></textarea>
+</div>
+<div class="stats-box">
+<div class="stat-item">
+<div class="stat-value" id="char-count">0</div>
+<div class="stat-label">文字数</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" id="line-count">0</div>
+<div class="stat-label">行数</div>
+</div>
+<div class="stat-item">
+<div class="stat-value" id="suggested-slides">0</div>
+<div class="stat-label">推奨枚数</div>
+</div>
+</div>
+<div class="split-controls">
+<label class="form-label" style="margin:0">スライド枚数:</label>
+<input type="number" id="slide-count" min="1" max="50" value="5">
+<button type="button" class="split-btn" id="split-btn">分割する</button>
+</div>
+<div class="notice-box" style="margin-top:12px;">資料を入力 → 枚数を設定 → 「分割する」で自動配置</div>
+</div>
+</div>
+
+<div class="card" id="card-slides">
+<div class="card-header">
+<span class="card-title">📑 スライド編集 <span id="slide-info" style="font-size:10px;color:#6b7280;">(0枚)</span></span>
+<span class="card-toggle">▼</span>
+</div>
+<div class="card-content">
+<div class="slide-nav" id="slide-nav"></div>
+<div class="slide-editor" id="slide-editor">
+<div style="text-align:center;color:#6b7280;padding:40px 0;">
+スライドを分割すると編集できます
+</div>
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="right-col" id="right-col">
+<div style="margin-bottom:12px;">
+<div class="preview-container" id="preview">
+<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:12px;">
+スライドを選択してください
+</div>
+</div>
+</div>
+<div>
+<div class="prompt-header">
+<span style="font-size:12px;font-weight:600;color:#9ca3af;">プロンプト <span id="prompt-slide-info"></span></span>
+<div class="prompt-btns">
+<button class="copy-btn" id="copy-btn">コピー</button>
+<button class="dl-btn" id="dl-btn">📥 全スライドMD</button>
+</div>
+</div>
+<pre class="prompt-output" id="prompt">スライドを作成するとプロンプトが生成されます</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div class="fab-container">
+<button type="button" class="fab primary" id="copy-fab">コピー</button>
+</div>
+
+<div class="reset-notice" id="reset-notice">✓ リセット完了</div>
+
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/render.js"></script>
+<script src="js/prompt.js"></script>
+<script src="js/events.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
